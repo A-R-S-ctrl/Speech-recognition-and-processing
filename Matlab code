@@ -1,0 +1,290 @@
+clc;
+clear all;
+close all;
+%code begins...............................................................
+disp("Hello!! Entering into Matlab code");
+disp(" Linear Predictive Speech Synthesizer");
+info=audioinfo('hid_f.wav');
+disp("Audio information for female voice:")
+disp(info)
+%Audio segmentation
+[y,fs] = audioread('hid_f.wav');
+figure(1)
+plot(y)
+title('Extracted original speech signal:Female');
+xlabel('no.of samples');ylabel('amplitude');
+start_sample = 0.06*fs;
+end_sample = 0.16*fs;
+samples = [start_sample,end_sample];
+clear y fs
+[y,fs] = audioread('hid_f.wav', samples);
+disp("Playing segmented original speech sample");
+sound(y,fs);
+figure(2)
+spectrogram(y)
+title('original female voice segment-spectrogram');
+figure(3) 
+periodogram(y)
+title('for original female voice')
+figure(4)
+plot(y); 
+title('Segmented original speech signal:Female');
+xlabel('no.of samples');ylabel('amplitude');
+%Calculating LPC coefficients
+model_order = 25;
+a = lpc(y,model_order);
+figure(5)
+plot(a);
+title('LPC coefficients');
+%frequency reponse
+[h,f] = freqz(1,a,length(y));
+dBh = 20*log10(abs(h)+eps);
+figure(6)
+plot(dBh);
+title('Frequency Response-female');
+xlabel('no. of samples'); ylabel('Gain(dB)');
+%Amplitude spectrum
+ydft = fft(y);
+ydft = ydft(1:length(y)/2+1);
+freq = 0:fs/length(y):fs/2;
+figure(7)
+subplot(211);
+plot(freq,abs(ydft));
+title("magnitude of y")
+subplot(212);
+plot(freq,unwrap(angle(ydft))); 
+title("phase of y")
+xlabel('Hz');
+%formant estimation
+rts = roots(a);
+disp("roots of a:");
+disp(rts)
+figure(8)
+zplane(rts)
+title("z-plane for female voice")
+rts = rts(imag(rts)>=0);
+angz = atan2(imag(rts),real(rts));
+[freqs,indices] = sort(angz.*(fs/(2*pi)));
+BW = (-1/2)*(fs/(2*pi))*log(abs(rts(indices)));
+nn=1;
+for kk=1:length(freqs)
+     if(freqs(kk)>90 && BW(kk)<400)
+          formants(nn)=freqs(kk);
+          nn=nn+1;
+     end
+end
+disp("Formant frequencies of female voice signal are as follows:");
+formants
+f0 = pitch(y,fs); 
+disp("Fundamental frequencies of female voice signal are ");
+disp(f0)
+f0 = mean(f0);
+disp("Mean Fundamental Frequency of female voice signal = ");
+disp(f0);
+disp("pitch curve of female voice signal ");
+[F0,idx]= pitch(y,fs);
+figure(9)
+periodogram(F0)
+title(' f0 for female voice sample')
+figure(10)
+plot(idx,F0)
+title('fundamental frequency identification for female voice');
+xlabel('location’);ylabel(‘frequency');
+%pulse train generation
+t= 0:1/fs:1;
+imp = zeros(size(t));
+imp(1:fs/f0:end) = 1;
+figure(11)
+plot(t,imp);
+title('pulse train for female voice reconstruction')
+xlabel('time'); ylabel('amplitude');
+%reconstruction
+disp("Reconstruction of female speech signal begins here");
+est_y = filter(1,a,imp);
+audiowrite('newhid_f.wav',est_y,fs);
+[new_y,new_fs]=audioread('newhid_f.wav',samples);
+audiowrite('newhid_f.wav',new_y,new_fs);
+disp("Playing synthesized female speech sample");
+sound(new_y,new_fs);
+
+figure(12)
+plot(new_y);
+title(' Estimated female speech signal');
+xlabel('No. of samples'); ylabel('amplitude');
+figure(12)
+spectrogram(new_y)
+%amplitude spectrum 
+ydftnew = fft(new_y);
+ydftnew = ydftnew(1:length(new_y)/2+1);
+freqnew = 0:new_fs/length(new_y):new_fs/2;
+figure(13)
+subplot(211);
+plot(freqnew,abs(ydftnew));
+title("magnitude of ynew")
+subplot(212);
+plot(freqnew,unwrap(angle(ydftnew))); 
+title("phase of ynew")
+xlabel('Hz');
+%comparison
+figure(14)
+subplot(1,2,1);
+plot(y)
+title('Original signal female voice')
+xlabel('samples'); ylabel('amplitude');
+subplot(122)
+plot(new_y,'r-')
+title('Estimated signal female voice')
+xlabel('samples'); ylabel('amplitude');
+figure(15)
+plot(y)
+title('Original signal female voice')
+xlabel('samples'); ylabel('amplitude');
+hold on
+plot(new_y,'r-')
+title('Estimated signal for female voice')
+xlabel('samples'); ylabel('amplitude');
+figure(16)
+periodogram(new_y)
+title('for  resynthesised female speech signal');
+disp("Leaving, Bye!!!!");
+ .........................................................................
+%Processing for male voice 
+disp('Entering into male voice processing code');
+info1=audioinfo('hid_m.wav');
+disp("Audio information for male voice:")
+disp(info1)
+%segmentation of male voice
+[y1,fs1] = audioread('hid_m.wav');
+start_sample1 = 0.06*fs1;
+end_sample1 = 0.16*fs1;
+samples1 = [start_sample1,end_sample1];
+clear y1 fs1
+[y1,fs1] = audioread('hid_m.wav', samples1);
+disp("Playing segmented original male speech sample");
+sound(y1,fs1);
+figure(17)
+spectrogram(y1)
+figure(18)
+periodogram(y1)
+title('for original male voice segment');
+figure(19)
+plot(y1);
+title('segmented original speech signal:male');
+xlabel('no.of samples');ylabel('amplitude');
+%pitch calculation
+f01 = pitch(y1,fs1);
+disp("Fundamental frequencies of male voice signal are ");
+disp(f01)
+f01 = mean(f01);
+disp("Mean Fundamental Frequency of male voice signal = ");
+disp(f01);
+disp("pitch curve of male voice signal ");
+[F01,idx1]= pitch(y1,fs1);
+figure(20)
+periodogram(F01)
+figure(21)
+plot(idx1,F01)
+title('fundamental frequency identification for male voice');
+xlabel('location');ylabel('frequency');
+%LPC coefficients
+model_order1 = 35;
+a1 = lpc(y1,model_order1);
+figure(22)
+plot(a1);
+title('LPC coefficients');
+%frequency response
+[h1,f1] = freqz(1,a1,length(y1));
+dBh1 = 20*log10(abs(h1)+eps);
+figure(23)
+plot(dBh1);
+title('Frequency Response-male');
+xlabel('no. of samples'); ylabel('Gain(dB)');
+%magnitude and phase of y
+ydft1 = fft(y1);
+ydft1 = ydft1(1:length(y1)/2+1);
+freq1 = 0:fs1/length(y1):fs1/2;
+figure(24)
+subplot(211);
+plot(freq1,abs(ydft1));
+title("magnitude of y1")
+subplot(212);
+plot(freq1,unwrap(angle(ydft1))); 
+title("phase of y1")
+xlabel('Hz');
+%formant estimation 
+rts1 = roots(a1);
+disp("roots of a1");
+disp(rts1)
+figure(25)
+zplane(rts1)
+title("z-plane for male voice")
+rts1 = rts1(imag(rts1)>=0);
+angz1 = atan2(imag(rts1),real(rts1));
+[freqs1,indices1] = sort(angz1.*(fs1/(2*pi)));
+BW1 = (-1/2)*(fs1/(2*pi))*log(abs(rts1(indices1)));
+nn1=1;
+for kk1=1:length(freqs1)
+     if(freqs1(kk1)>90 && BW1(kk1)<400)
+          formants1(nn1)=freqs1(kk1);
+          nn1=nn1+1;
+     end
+end
+disp("Formant frequencies are as follows:");
+formants1
+%pulse train generation
+t1= 0:1/fs1:1;
+imp1 = zeros(size(t1));
+imp1(1:fs1/f01:end) = 1;
+figure(26)
+plot(t1,imp1);
+title('pulse train for male voice reconstruction')
+xlabel('time'); ylabel('amplitude');
+%reconstruction
+disp("Reconstruction of female speech signal begins here");
+est_y1 = filter(1,a1,imp1);
+audiowrite('newhid_m.wav',est_y1,fs1);
+[new_y1,new_fs1]=audioread('newhid_m.wav',samples1);
+audiowrite('newhid_m.wav',new_y1,new_fs1);
+disp("Playing synthesized male speech sample");
+sound(new_y1,new_fs1);
+%amplitude spectrum
+ydftnew1 = fft(new_y1);
+ydftnew1 = ydftnew1(1:length(new_y1)/2+1);
+freqnew1 = 0:new_fs1/length(new_y1):new_fs1/2;
+figure(27)
+subplot(211);
+plot(freqnew1,abs(ydftnew1));
+title("magnitude of ynew1")
+subplot(212);
+plot(freqnew1,unwrap(angle(ydftnew1))); 
+title("phase of ynew1")
+xlabel('Hz');
+figure(28)
+plot(new_y1);
+title(' Estimated male speech signal');
+xlabel('No. of samples'); ylabel('amplitude');
+figure(29)
+spectrogram(new_y1)
+%comparison
+figure(30)
+subplot(1,2,1);
+plot(y1)
+title('Original signal male voice')
+xlabel('samples'); ylabel('amplitude');
+subplot(122)
+plot(new_y1,'r-')
+title('Estimated signal male voice')
+xlabel('samples'); ylabel('amplitude');
+figure(31)
+plot(y1)
+title('Original signal male voice')
+xlabel('samples'); ylabel('amplitude');
+hold on
+plot(new_y1,'r-')
+title('Estimated signal male voice')
+xlabel('samples'); ylabel('amplitude');
+figure(32)
+periodogram(new_y1)
+title('for male resynthesised speech signal');
+disp("Leaving, Bye again!!!!");
+%end of code..........................................
